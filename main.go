@@ -3,6 +3,7 @@ package main
 import (
 	"ecommerce/controllers"
 	"ecommerce/database"
+	"ecommerce/middleware"
 	"ecommerce/routes"
 	"log"
 	"os"
@@ -16,13 +17,14 @@ func main() {
 		port = "8080"
 	}
 
+	// database.Client from the Client variable database connection 
 	app := controllers.NewApplication(database.ProductData(database.Client, "Products"), database.UserData(database.Client, "Users"))
 
 	router := gin.New()
 	router.Use(gin.Logger())
 
 	routes.UserRoutes(router)
-	router.Use(middlware.Authentication())
+	router.Use(middleware.Authentication())
 
 	router.GET("/addtocart", app.AddToCart())
 	router.GET("/removeitem", app.RemoveItem())
