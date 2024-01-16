@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"context"
+	"ecommerce/database"
 	"ecommerce/models"
 	"fmt"
 	"log"
@@ -12,16 +13,35 @@ import (
 	"github.com/go-playground/validator/v10"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/mongo"
+	"golang.org/x/crypto/bcrypt"
 )
 
+var UserCollection *mongo.Collection = database.UserData(database.Client, "Users")
+var ProductCollection *mongo.Collection = database.ProductData(database.Client, "Products")
+// for validating required field
 var Validate = validator.New()
 
-func hashPassword(password string) string {
-
+func HashPassword(password string) string {
+	// convert to ASCII and generate hash with cost of 14
+	bytes, err := bcrypt.GenerateFromPassword([]byte(password), 14)
+	if err != nil {
+		log.Panic(err)
+	}
+	return string(bytes)
 }
 
-func VerifyPassword(userPassword string, givenPassword string) (bool, error) {
+func VerifyPassword(userPassword string, givenPassword string) (bool, string) {
+	// verify the given password and hashed password 
+	err := bcrypt.CompareHashAndPassword([]byte(givenPassword), []byte(userPassword))
+	valid := true
+	msg := ""
 
+	if err != nil {
+		msg = "Invalid user password"
+		valid = false
+	}
+	return valid, msg
 }
 
 func Signup() gin.HandlerFunc {
@@ -139,7 +159,38 @@ func Login() gin.HandlerFunc {
 }
 
 func SearchProducts() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		var productList []models.Product 
+		var ctx, cancel = context.WithTimeout(context.Background(), 100*time.Second)
+		defer cancel()
+
+		// getting all the data in table with empty {} query
+		cursor, err := ProductCollection.Find(ctx, bson.D{{}})
+		if err != nil {
+			c.IndentedJSON(http.StatusInternalServerError, "something went wrong, please try again")
+			return
+		}
+		defer cursor.Close(ctx)
+
+		err = cursor.All(ctx, &productList)
+		if err != nil {
+			log.Println(err)
+			c.AbortWithStatus(http.StatusInternalServerError)
+			return 
+		}
+
+		// additional error checking if there is any cursor error that is happend
+		if err := cursor.Err(); err != nil {
+			log.Println(err)
+			c.IndentedJSON(400, "invalid")
+			return
+		}
+		defer cancel()
+
+		c.IndentedJSON(200, productList)
+	}
 }
 
 func SearchProductByQuery() gin.HandlerFunc {
+	
 }
