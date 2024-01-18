@@ -4,7 +4,6 @@ import (
 	"context"
 	"ecommerce/database"
 	"log"
-	"os"
 	"time"
 
 	jwt "github.com/dgrijalva/jwt-go"
@@ -26,7 +25,7 @@ type SignedDetails struct {
 }
 
 var UserData *mongo.Collection = database.UserData(database.Client, "User")
-var SECRET_KEY = os.Getenv("SECRET_KEY")
+var SECRET_KEY = "hello"
 
 func TokenGenerator(email string, firstName string, lastName string, uid string) (signedtoken string, signedrefrestoken string, err error) {
 	claims := &SignedDetails{
@@ -81,7 +80,7 @@ func ValidateToken(signedtoken string) (claims *SignedDetails, msg string) {
 	return claims, msg
 }
 
-func UpdateAllToken(signedtoken string, signedrefreshtoken string, userid string){
+func UpdateAllTokens(signedtoken string, signedrefreshtoken string, userid string){
 	ctx, cancel := context.WithTimeout(context.Background(),100* time.Second)
 	defer cancel()
 
